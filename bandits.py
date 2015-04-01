@@ -2,13 +2,15 @@
 
 import numpy as np
 import scipy.stats as stats
+import sys
 
+MIN_INT = -sys.maxint - 1
 
-class LinearRewards:
+class LinearUCB:
     """
     Given a set of context, returns a reward at each time step
     """
-    def __init__(self, beta, epsilon):
+    def __init__(self, beta, alpha, epsilon):
         """
         Parameters:
         ----------
@@ -18,30 +20,104 @@ class LinearRewards:
         epsilon: noise
             Noise in the linear bandit assumtion: r = a^T x + eps
         """
+        # Parameters of generator
         self.beta = beta # unknown vector we are trying to fit
+        self.d = len(self.beta)
         self.epsilon = epsilon
+        self.alpha = alpha
+        self.t = 0
+        # Estimations
+        self.beta_estimation = None
+        self.B = np.eye(self.d)
+        self.B_inv = None
+        self.b = None
+        self.reward = None
+        self.UCB = None
+
+    def computeEstimation(self):
+        self.B_inv = np.inv(B)
+        self.beta_estimation = np.dot(self.B__inv, self.b)
+
+    def getUCB(self, context):
+        """
+        Compute the upper confidence bound of the linear arm for this context
+
+        Parameters:
+        -----------
+        context: numpy array (1 * d)
+        B_inv: numpy array (d * d)
+        t: int
+        """
+        bilinear = np.dot(context, np.dot(B_inv, context))
+        UCB = np.dot(self.beta_estimation, context) + \
+                self.alpha * np.sqrt(bilinear * np.log(self.t+2))
+        return UCB
+
+    def chooseArm(self, Contexts):
+        """
+        Chooses the next arm to play among the vectors in Contexts
+
+        Parameters:
+        -----------
+        Contexts: list of context vectors
+        """
+        max_UCB = MIN_INT
+        best_context = None
+        index = 0
+        for (i, x) in enumerate(Contexts):
+            UCB = self.getUCB(x)
+            if UCB > max_UCB:
+                index = i
+                max_UCB = UCB
+                best_context = x
+        self.UCB = max_UCB
+        return (index, best_context)
 
     def getReward(self, context):
         """
+        Generates a reward and update b
+        
+        Parameters:
+        -----------
         context: numpy array (1*d)
         """
-        return np.inner(self.beta, context) + self.epsilon.rvs()
+        self.reward = np.dot(self.beta, context) + self.epsilon.rvs()
+        self.b += self.reward * context
+        return reward
 
-class LinUCB:
-    
-    def __init__(self,d=2,alpha=0.1):
-        # parameters of the algorithm
-        self.d = d
-        self.alpha = alpha
-        # current estimations
-        self.epoch = 0
-        self.history = None
-        self.betaEstimation_t = np.zeros(d)
-        self.B_t = np.identity(self.d)
-    
+    def updateValues(self, context, reward):
+        """
+        Update the B matrix and the b numpy array
+        """
+        self.B += np.outer(context, context)
+        self.b += reward * context
+
     def play(Contexts):
         """
+        Parameters:
+        -----------
         Contexts: numpy array c_t * d
         """
-        self.betaEstimation_t = d
+        self.t += 1
+        self.computeEstimation()
+        index, best_context = self.chooseArm(Contexts)
+        reward = self.getReward(best_context)
+        self.updateValues(best_context, reward)
+        return best_context, reward
 
+    def gestBestReward(Contexts):
+        """
+        Compute the mean reward of the best arm
+
+        Parameters:
+        -----------
+        Contexts: numpy array c_t * d
+        """
+        bestReward = MIN_INT
+        bestArm = None
+        for x in Contexts:
+            reward = np.dot(self.beta, x)
+            if reward > bestReward:
+                bestReward = reward
+                bestArm = x
+        return bestArm, bestReward
