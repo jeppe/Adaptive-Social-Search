@@ -30,13 +30,13 @@ class LinearUCB:
         self.beta_estimation = None
         self.B = np.eye(self.d)
         self.B_inv = None
-        self.b = None
+        self.b = np.zeros(self.d)
         self.reward = None
         self.UCB = None
 
     def computeEstimation(self):
-        self.B_inv = np.inv(B)
-        self.beta_estimation = np.dot(self.B__inv, self.b)
+        self.B_inv = np.linalg.inv(self.B)
+        self.beta_estimation = np.dot(self.B_inv, self.b)
 
     def getUCB(self, context):
         """
@@ -48,7 +48,7 @@ class LinearUCB:
         B_inv: numpy array (d * d)
         t: int
         """
-        bilinear = np.dot(context, np.dot(B_inv, context))
+        bilinear = np.dot(context, np.dot(self.B_inv, context))
         UCB = np.dot(self.beta_estimation, context) + \
                 self.alpha * np.sqrt(bilinear * np.log(self.t+2))
         return UCB
@@ -76,14 +76,15 @@ class LinearUCB:
     def getReward(self, context):
         """
         Generates a reward and update b
-        
+ 
         Parameters:
         -----------
         context: numpy array (1*d)
         """
+        a = np.dot(self.beta, context)
         self.reward = np.dot(self.beta, context) + self.epsilon.rvs()
         self.b += self.reward * context
-        return reward
+        return self.reward
 
     def updateValues(self, context, reward):
         """
@@ -92,20 +93,20 @@ class LinearUCB:
         self.B += np.outer(context, context)
         self.b += reward * context
 
-    def play(Contexts):
+    def play(self, Contexts):
         """
         Parameters:
         -----------
         Contexts: numpy array c_t * d
         """
         self.t += 1
-        self.computeEstimation()
+        #self.computeEstimation()
         index, best_context = self.chooseArm(Contexts)
         reward = self.getReward(best_context)
         self.updateValues(best_context, reward)
         return best_context, reward
 
-    def gestBestReward(Contexts):
+    def getBestReward(self, Contexts):
         """
         Compute the mean reward of the best arm
 

@@ -2,103 +2,96 @@
 
 # Contextual bandits tests with TOPKS context vectors
 
+import sys
 import numpy as np
 from scipy import stats
 from matplotlib import pyplot as plt
-import urllib2
-import json
 
-from bandits import LinUCB
+from bandits import LinearUCB
+from searcher import simulateQueryPairs, generateContexts
 
-# Horizon
+
+N = 300
 T = 1000
-DOMAIN = 'http://localhost:8000/topks' # Domain of the TOPKS search server
-TIME = 200
-N_NEIGH = 100
-NEW_QUERY = 'true'
-ALPHA = 0
+k = 5
+VERBOSE = False
+theta = np.array([0.1,0.8])
 
+# Queries simulation
+triplesFile = sys.argv[1]
+"""
+ Get 2 query pairs datasets:
+   1. to estimate theta_0 (bias of regression)
+   2. to learn
+"""
+pairs_beta0_est, pairs_learning = simulateQueryPairs(triplesFile, N, T)
 
-def getContexts(seeker, query, beta, k):
-    """
-    Given a seeker and a query, send a GET http request to the TOPKS
-    server. Parse the JSON reponse and return context vectors
+# Generate all Contexts
+AllContexts = []
+for pair in pairs_beta0_est:
+    AllContexts.append(generateContexts(pair, theta, k))
+n_vecs = sum([len(C_t) for C_t in AllContexts])
+theta_0 = - np.dot(sum([sum(Contexts_t) for Contexts_t in AllContexts]), theta) / n_vecs
 
-    Parameters:
-    -----------
-    seeker: int
-    query: list of String
-    beta: numpy array (1*d)
-    k: int
-    """
-    Contexts = []
-    url = DOMAIN + \
-            '?q=' + '+'.join(query) + \
-            '&seeker=' + str(seeker) + \
-            '&t=' + str(TIME) + \
-            '&newQuery=' + NEW_QUERY + \
-            '&nNeigh=' + str(N_NEIGH) + \
-            '&alpha=' + str(ALPHA) + \
-            '&k='+str(k)
-    response = urllib2.urlopen(url)
-    data = json.load(response)
-    if not data.has_key('status') or not data.has_key('results'):
-        return None
-    if data.get('status') != 1:
-        return None
-    results = data.get('results')
-    for x in results:
-        Contexts.append(np.array([x.get('textualScore'), x.get('socialScore')]))
-    print Contexts
-    return Contexts
-
-def generateContexts(T):
-    AllContexts = []
-    for i in range(T):
-        AllContexts.append([])
-    return AllContexts
-
+# Bandit parameters
 noise = stats.norm(0, 0.2)
-alpha = 0.1
-beta = np.array([0.5, 0.5])
-linUCB = LinUCB(beta, alpha, noise)
-
-AllContexts = generateContexts(T)
+alpha = 0.01
+beta = np.append(theta_0, theta)
+linUCB = LinearUCB(beta, alpha, noise)
 
 # Estimated cumulated regret up to time T
 
 rewards, arms = [], []
-bestRewards = []
-for Contexts_t in range(AllContexts):
+bestRewards, bestArms = [], []
+
+print 'Beta'
+print str(beta)
+
+print 'First contexts'
+
+counter = 1
+for pair in pairs_learning:
+    if counter%100 == 0:
+        print counter
+    counter += 1
+    linUCB.computeEstimation()
+    # Create new Contexts
+    if linUCB.beta_estimation is None or sum(linUCB.beta_estimation[1:]) == 0:
+        Contexts_t = generateContexts(pair, np.array([0.5,0.5]), k)
+    else:
+        if VERBOSE:
+            print "Estimation"
+            print str(linUCB.beta_estimation)
+        Contexts_t = generateContexts(pair, linUCB.beta_estimation[1:], k)
+    Contexts_t = [np.append(1, x) for x in Contexts_t]
     # Use our policy to choose next action
     x, reward = linUCB.play(Contexts_t)
     # Save our action and observation
     arms.append(x)
     rewards.append(reward)
     # Compute Best theoretical value
-    bestReward = linUCB.getBestReward(Contexts_t)
+    bestArm, bestReward = linUCB.getBestReward(Contexts_t)
     # Save theoretical best action and observation
     bestArms.append(bestArm)
     bestRewards.append(bestReward)
+    if VERBOSE:
+        print str(Contexts_t)
+        print "Chosen"
+        print str(x)
+        print str(reward)
+        print "Best"
+        print str(bestArm)
+        print str(bestReward)
+        raw_input("Press Enter to continue...")
 
 sumRewards = np.cumsum(rewards)
 sumBestRewards = np.cumsum(bestRewards)
 
-#counter = 0
-#
-#for i in range(N):
-#    dumb, rew1 = bd.thompsonSampling(n,MAB)
-#    # complete EXP3Stochastic 
-#    dumb, rew2 = bd.EXP3Stochastic(n,beta,eta,MAB)
-#    reg1 += np.arange(1,n+1)*mumax - np.cumsum(rew1)  # ??? +1  ???
-#    reg2 += (1:n)*mumax - np.cumsum(rew2)
-#    counter += 1
-#    # np.cumsum(np.ones(n)*max(means))-np.cumsum(rew2)
-#
-#reg1 /= N
-#reg2 /= N
+# Plot
 
-plt.plot(np.arange(1,n+1),reg1,label='Thomson Sampling')
-plt.plot(np.arange(1,n+1),reg2,label='EXP3')
+regret = (sumBestRewards - sumRewards)
+fig = plt.figure(figsize=(7, 6))
+plt.plot(np.arange(1,T+1),regret,label='LinUCB')
 plt.legend()
-plt.show()
+plt.savefig('./img/'+'test.png')
+plt.close(fig)
