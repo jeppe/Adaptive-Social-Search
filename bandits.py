@@ -2,6 +2,8 @@
 
 import numpy as np
 import scipy.stats as stats
+from scipy.special import expit
+import random
 import sys
 
 MIN_INT = -sys.maxint - 1
@@ -81,8 +83,12 @@ class LinearUCB:
         -----------
         context: numpy array (1*d)
         """
-        a = np.dot(self.beta, context)
+        #self.reward = expit(np.dot(self.beta, context)) # + self.epsilon.rvs()
         self.reward = np.dot(self.beta, context) + self.epsilon.rvs()
+        #if random.random() < self.reward:
+        #    self.reward = 1
+        #else:
+        #    self.reward = 0
         self.b += self.reward * context
         return self.reward
 
@@ -104,7 +110,7 @@ class LinearUCB:
         index, best_context = self.chooseArm(Contexts)
         reward = self.getReward(best_context)
         self.updateValues(best_context, reward)
-        return best_context, reward
+        return index, reward
 
     def getBestReward(self, Contexts):
         """
@@ -116,9 +122,9 @@ class LinearUCB:
         """
         bestReward = MIN_INT
         bestArm = None
-        for x in Contexts:
-            reward = np.dot(self.beta, x)
+        for index, x in enumerate(Contexts):
+            reward = expit(np.dot(self.beta, x))
             if reward > bestReward:
                 bestReward = reward
-                bestArm = x
+                bestArm = index
         return bestArm, bestReward
