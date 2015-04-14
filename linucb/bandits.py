@@ -39,6 +39,9 @@ class LinearUCB:
     def computeEstimation(self):
         self.B_inv = np.linalg.inv(self.B)
         self.beta_estimation = np.dot(self.B_inv, self.b)
+        if np.linalg.norm( np.dot(self.B_inv, self.B) - np.eye(2) ) > 1e-10:
+            print np.linalg.norm(np.dot(self.B_inv,self.B)-np.eye(2))
+        return
 
     def getUCB(self, context):
         """
@@ -53,6 +56,7 @@ class LinearUCB:
         bilinear = np.dot(context, np.dot(self.B_inv, context))
         UCB = np.dot(self.beta_estimation, context) + \
                 self.alpha * np.sqrt(bilinear * np.log(self.t+2))
+        #print str(self.alpha * np.sqrt(bilinear * np.log(self.t+2)))
         return UCB
 
     def chooseArm(self, Contexts):
@@ -65,15 +69,15 @@ class LinearUCB:
         """
         max_UCB = MIN_INT
         best_context = None
-        index = 0
+        arm = 0
         for (i, x) in enumerate(Contexts):
             UCB = self.getUCB(x)
             if UCB > max_UCB:
-                index = i
+                arm = i
                 max_UCB = UCB
                 best_context = x
         self.UCB = max_UCB
-        return (index, best_context)
+        return (arm, best_context)
 
     def getReward(self, context):
         """
@@ -84,12 +88,12 @@ class LinearUCB:
         context: numpy array (1*d)
         """
         #self.reward = expit(np.dot(self.beta, context)) # + self.epsilon.rvs()
-        self.reward = np.dot(self.beta, context) + self.epsilon.rvs()
+        self.reward = np.dot(self.beta, context) + self.epsilon[self.t-1] #.rvs()
         #if random.random() < self.reward:
         #    self.reward = 1
         #else:
         #    self.reward = 0
-        self.b += self.reward * context
+        #self.b += self.reward * context
         return self.reward
 
     def updateValues(self, context, reward):
@@ -107,10 +111,14 @@ class LinearUCB:
         """
         self.t += 1
         #self.computeEstimation()
-        index, best_context = self.chooseArm(Contexts)
+        if self.t <= len(Contexts):
+            arm = self.t - 1
+            best_context = Contexts[self.t-1]
+        else:
+            arm, best_context = self.chooseArm(Contexts)
         reward = self.getReward(best_context)
         self.updateValues(best_context, reward)
-        return index, reward
+        return arm, reward
 
     def getBestReward(self, Contexts):
         """
@@ -123,7 +131,8 @@ class LinearUCB:
         bestReward = MIN_INT
         bestArm = None
         for index, x in enumerate(Contexts):
-            reward = expit(np.dot(self.beta, x))
+            #reward = expit(np.dot(self.beta, x))
+            reward = np.dot(self.beta, x)
             if reward > bestReward:
                 bestReward = reward
                 bestArm = index
