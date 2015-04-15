@@ -27,7 +27,7 @@ for l in fileinput.input():
 
 data = map(len, users.values())
 
-#print len(data)
+print len(data)
 data += [0] * (77272 - len(data))
 
 bins = [0,1,2,3,4,5,6,7,8,9,10,15,20,30,40,50,100,200,500,1000,10000]
