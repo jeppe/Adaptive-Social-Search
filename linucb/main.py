@@ -16,7 +16,7 @@ from searcher import simulateQueryPairs, generateContexts
 
 
 N = 300
-T = 1000000
+T = 200000
 k = 4
 VERBOSE = False
 #theta = np.array([0.3,0.7])
@@ -48,7 +48,7 @@ print 'Total number of contexts:', str(len(AllContexts))
 #theta_0 = -np.dot(AllContexts[1],theta)
 
 # Bandit parameters
-noise = np.random.normal(0,.1,T)
+noise = np.random.normal(0,.4,T)
 alpha = 1.
 #beta = np.append(theta_0, theta)
 beta = theta
@@ -70,8 +70,7 @@ rewards, arms = [], []
 bestRewards, bestArms = [], []
 betaEstimations = []
 
-print 'Beta'
-print str(beta)
+print 'Beta: ', str(beta)
 
 linUCB.computeEstimation()
 
@@ -127,7 +126,6 @@ for i in range(T):
 
 from collections import Counter
 print Counter(arms)
-#print result
 
 sumRewards = np.cumsum(rewards)
 sumBestRewards = np.cumsum(bestRewards)
@@ -148,9 +146,9 @@ plt.legend()
 plt.savefig('./img/'+'beta_estimation.png')
 plt.close(fig)
 
-fig = plt.gcf()#figure(figsize=(7, 6))
-plt.gca().set_xlim((-1.2,1.2))
-plt.gca().set_ylim((-1.2,1.2))
+fig = plt.gcf()
+plt.gca().set_xlim((0.,1.2))
+plt.gca().set_ylim((0.,1.2))
 plt.gca().plot(np.array(map(lambda x: x[0],AllContexts)),np.array(map(lambda x: x[1],AllContexts)),'o',color='black')
 plt.gca().plot(theta[0], theta[1],'o',color='blue')
 normalisation = norm(np.array([linUCB.beta_estimation[0],linUCB.beta_estimation[1]]))
