@@ -1,0 +1,28 @@
+Files to build dataset
+======================
+
+* python get_biggest_component.py network.txt
+-> takes as input the network file
+-> writes the edges (u1	u2	weight) in a file networkBiggestComponent.txt
+
+* python filter_several_reviews.txt triples.txt
+-> takes as input the triple file (user	item	tag)
+-> write in the standard output the triples whose item has been reviewed by at
+least 5 different users
+
+* python filter_triples_from_biggest_component.py inTriples.txt outTriples.txt biggestCompo.txt
+-> takes as input:
+    + inTriples.txt: triple file
+    + outTriples.txt: triple file where to write the filtered triples
+    + biggestCompo.txt: network biggest component file
+-> filters all the triples whose user in not in the biggest component
+
+* python extract_triples.py data.json
+-> takes as input the json file containing data from Yelp dataset
+-> builds triples extracting tags from reviews using the utilities from nlp.py file
+-> writes the triples in a file called triples.txt
+-> recquires a file called good_users.txt containing the list of users with the hashtag and int
+representation. These users should correspond to users having at least one friend for example.
+
+Files to have statistics
+========================
