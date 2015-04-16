@@ -3,3 +3,5 @@
 *.txt
 img/
 dataset/data/
+linucb/data/
+*.swo

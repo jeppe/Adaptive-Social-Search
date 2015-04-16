@@ -4,14 +4,14 @@ import urllib2
 import json
 import random
 import numpy as np
+import sys
 
 # Horizon
-T2 = 1000
-DOMAIN = 'http://localhost:8000/topks' # Domain of the TOPKS search server
-TIME = 400
-N_NEIGH = 10000
-NEW_QUERY = 'true'
-ALPHA = 0
+DOMAIN = 'http://localhost:8000/topks'  # Domain of the TOPKS search server
+TIME = 5000                             # No limit, we want to visit the whole graph
+N_NEIGH = 100000                        # Whole graph
+NEW_QUERY = 'true'                      # new query every time (no prefix strategy)
+ALPHA = 0                               # search with alpha in the balance 
 
 
 def getContexts(seeker, query, alpha, k):
@@ -27,16 +27,14 @@ def getContexts(seeker, query, alpha, k):
     k: int
     """
     Contexts = []
-    print query
     url = DOMAIN + \
-            '?q=' + '+'.join(query) + \
+            '?q=' + '+'.join(query.split()) + \
             '&seeker=' + str(seeker) + \
             '&t=' + str(TIME) + \
             '&newQuery=' + NEW_QUERY + \
             '&nNeigh=' + str(N_NEIGH) + \
-            '&alpha=' + str(0) + \
+            '&alpha=' + str(alpha) + \
             '&k='+str(k)
-    print url
     try:
         response = urllib2.urlopen(url)
         data = json.load(response)
@@ -49,6 +47,8 @@ def getContexts(seeker, query, alpha, k):
             Contexts.append(np.array([x.get('textualScore'), x.get('socialScore')]))
     except urllib2.HTTPError, error:
         print error.read()
+    except (ValueError, KeyError, TypeError) as error:
+        print error
     return Contexts
 
 def generateContexts(queryPair, betaEst, k):
